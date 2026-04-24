@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foundations of Energy Storage — Quest 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #05070d;
+    --bg-1: #0a0f1c;
+    --bg-2: #0f172a;
+    --panel: rgba(16, 24, 44, 0.72);
+    --panel-edge: rgba(120, 190, 255, 0.18);
+    --elec: #5ef0ff;
+    --elec-deep: #1aa3ff;
+    --amber: #ffb547;
+    --amber-deep: #ff7a00;
+    --danger: #ff5a6a;
+    --ok: #4ade80;
+    --text: #e8f1ff;
+    --text-dim: #8aa0c2;
+    --text-faint: #56688a;
+    --display: 'Chakra Petch', sans-serif;
+    --body: 'Manrope', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-family: var(--body);
+    background: var(--bg-0);
+    color: var(--text);
+    min-height: 100vh;
+    position: relative;
+    overflow-y: auto;
+  }
+
+  /* Ambient background — grid floor, nebula glow, scanlines */
+  .bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(1200px 700px at 15% -10%, rgba(26, 163, 255, 0.25), transparent 60%),
+      radial-gradient(1000px 600px at 90% 10%, rgba(255, 122, 0, 0.18), transparent 55%),
+      radial-gradient(800px 800px at 50% 110%, rgba(94, 240, 255, 0.14), transparent 60%),
+      linear-gradient(180deg, #05070d 0%, #07101f 60%, #050810 100%);
+  }
+  .bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(transparent 0, transparent calc(100% - 1px), rgba(94, 240, 255, 0.06) 100%),
+      linear-gradient(90deg, transparent 0, transparent calc(100% - 1px), rgba(94, 240, 255, 0.06) 100%);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 55%, #000 40%, transparent 80%);
+  }
+
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* Orbiting particles for atmosphere */
+  .particle {
+    position: fixed;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--elec);
+    box-shadow: 0 0 8px var(--elec), 0 0 16px var(--elec-deep);
+    opacity: 0.55;
+    animation: drift linear infinite;
+    z-index: 1;
+    pointer-events: none;
+  }
+  @keyframes drift {
+    0% { transform: translateY(110vh) translateX(0); opacity: 0; }
+    10% { opacity: 0.8; }
+    90% { opacity: 0.4; }
+    100% { transform: translateY(-10vh) translateX(30px); opacity: 0; }
+  }
+
+  /* --- Top HUD bar --- */
+  .hud {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 48px;
+    border-bottom: 1px solid rgba(94, 240, 255, 0.08);
+    backdrop-filter: blur(10px);
+    background: linear-gradient(180deg, rgba(5, 10, 20, 0.72), rgba(5, 10, 20, 0.15));
+  }
+  .hud-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-mark {
+    width: 44px;
+    height: 44px;
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+  .logo-mark svg { width: 100%; height: 100%; }
+  .brand-titles { line-height: 1; }
+  .brand-eyebrow {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    color: var(--elec);
+    text-transform: uppercase;
+    opacity: 0.9;
+  }
+  .brand-name {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 0.08em;
+    margin-top: 6px;
+    color: #fff;
+    text-shadow: 0 0 14px rgba(94, 240, 255, 0.3);
+  }
+
+  .hud-meta {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-family: var(--display);
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid rgba(94, 240, 255, 0.2);
+    border-radius: 999px;
+    background: rgba(10, 20, 40, 0.5);
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 8px var(--ok);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* --- Breadcrumb trail --- */
+  .breadcrumb {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 48px 0;
+    font-family: var(--display);
+    font-size: 12px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    flex-wrap: wrap;
+  }
+  .breadcrumb .crumb {
+    cursor: pointer;
+    transition: color 0.25s ease;
+  }
+  .breadcrumb .crumb:hover { color: var(--elec); }
+  .breadcrumb .crumb.active { color: var(--text); }
+  .breadcrumb .sep {
+    color: rgba(94, 240, 255, 0.3);
+    font-size: 10px;
+  }
+
+  /* --- Main stage --- */
+  .stage {
+    position: relative;
+    z-index: 5;
+    padding: 32px 48px 80px;
+    max-width: 1760px;
+    margin: 0 auto;
+  }
+
+  .view { display: none; animation: enter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .view.active { display: block; }
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .view-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 36px;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .view-title {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 56px;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    color: #fff;
+    position: relative;
+  }
+  .view-title .accent {
+    color: var(--elec);
+    text-shadow: 0 0 22px rgba(94, 240, 255, 0.45);
+  }
+  .view-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    max-width: 560px;
+    margin-top: 14px;
+    line-height: 1.6;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border: 1px solid rgba(94, 240, 255, 0.25);
+    background: rgba(10, 20, 40, 0.6);
+    border-radius: 6px;
+    font-family: var(--display);
+    font-size: 12px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .back-btn:hover {
+    border-color: var(--elec);
+    background: rgba(26, 163, 255, 0.15);
+    box-shadow: 0 0 30px rgba(94, 240, 255, 0.2);
+  }
+  .back-btn svg { width: 14px; height: 14px; }
+
+  /* --- Carousel shared --- */
+  .carousel-wrap {
+    position: relative;
+  }
+  .carousel {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(280px, 1fr);
+    gap: 28px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 10px 2px 28px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(94, 240, 255, 0.3) transparent;
+  }
+  .carousel::-webkit-scrollbar { height: 6px; }
+  .carousel::-webkit-scrollbar-track { background: rgba(94, 240, 255, 0.05); border-radius: 3px; }
+  .carousel::-webkit-scrollbar-thumb { background: rgba(94, 240, 255, 0.35); border-radius: 3px; }
+  .carousel::-webkit-scrollbar-thumb:hover { background: var(--elec); }
+
+  .nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid rgba(94, 240, 255, 0.3);
+    background: rgba(10, 20, 40, 0.85);
+    color: var(--elec);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    z-index: 3;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(6px);
+  }
+  .nav-arrow:hover {
+    background: rgba(26, 163, 255, 0.3);
+    box-shadow: 0 0 28px rgba(94, 240, 255, 0.4);
+    transform: translateY(-50%) scale(1.05);
+  }
+  .nav-arrow.left { left: -16px; }
+  .nav-arrow.right { right: -16px; }
+  .nav-arrow svg { width: 18px; height: 18px; }
+
+  /* --- Grade poster (vertical) --- */
+  .grade-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 340px));
+    gap: 36px;
+    justify-content: center;
+    padding: 30px 0 20px;
+  }
+  .poster {
+    position: relative;
+    aspect-ratio: 3 / 4.2;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--bg-1);
+    border: 1px solid var(--panel-edge);
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.3s ease;
+    transform-style: preserve-3d;
+    animation: rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(30px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .poster:nth-child(1) { animation-delay: 0.05s; }
+  .poster:nth-child(2) { animation-delay: 0.15s; }
+  .poster:nth-child(3) { animation-delay: 0.25s; }
+  .poster:nth-child(4) { animation-delay: 0.35s; }
+  .poster:nth-child(5) { animation-delay: 0.45s; }
+  .poster:nth-child(6) { animation-delay: 0.55s; }
+  .poster:nth-child(7) { animation-delay: 0.65s; }
+  .poster:nth-child(8) { animation-delay: 0.75s; }
+
+  .poster:hover {
+    transform: translateY(-8px) scale(1.015);
+    border-color: rgba(94, 240, 255, 0.6);
+    box-shadow:
+      0 20px 50px rgba(0, 0, 0, 0.6),
+      0 0 40px rgba(94, 240, 255, 0.25),
+      inset 0 0 0 1px rgba(94, 240, 255, 0.2);
+  }
+
+  .poster-art {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+  .poster-art svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .poster-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, transparent 40%, rgba(5, 7, 13, 0.75) 75%, rgba(5, 7, 13, 0.98) 100%);
+    pointer-events: none;
+  }
+
+  .poster-topbar {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .poster-topbar .chip {
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(94, 240, 255, 0.25);
+    border-radius: 4px;
+    backdrop-filter: blur(6px);
+  }
+  .poster-topbar .chip.amber {
+    border-color: rgba(255, 181, 71, 0.4);
+    color: var(--amber);
+  }
+  .poster-topbar .chip.green {
+    border-color: rgba(74, 222, 128, 0.4);
+    color: var(--ok);
+  }
+
+  .poster-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 22px 22px 24px;
+    z-index: 2;
+  }
+  .poster-eyebrow {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--elec);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .poster-title {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 24px;
+    letter-spacing: 0.02em;
+    line-height: 1.12;
+    color: #fff;
+  }
+  .poster-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-top: 8px;
+  }
+
+  /* Progress bar on module posters */
+  .poster-progress {
+    margin-top: 14px;
+    height: 4px;
+    background: rgba(94, 240, 255, 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .poster-progress > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--elec-deep), var(--elec));
+    box-shadow: 0 0 8px var(--elec);
+  }
+  .poster-progress-label {
+    margin-top: 6px;
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Locked state */
+  .poster.locked .poster-art { filter: grayscale(0.65) brightness(0.45) blur(1px); }
+  .poster.locked .poster-overlay {
+    background:
+      linear-gradient(180deg, rgba(5, 7, 13, 0.4) 0%, rgba(5, 7, 13, 0.75) 60%, rgba(5, 7, 13, 0.98) 100%);
+  }
+  .poster.locked:hover {
+    border-color: rgba(255, 181, 71, 0.55);
+    box-shadow:
+      0 20px 50px rgba(0, 0, 0, 0.6),
+      0 0 40px rgba(255, 122, 0, 0.2),
+      inset 0 0 0 1px rgba(255, 181, 71, 0.2);
+  }
+
+  .lock-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%);
+    display: grid;
+    place-items: center;
+    gap: 14px;
+    text-align: center;
+    z-index: 2;
+  }
+  .lock-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255, 181, 71, 0.2), rgba(255, 122, 0, 0.1));
+    border: 1.5px solid rgba(255, 181, 71, 0.6);
+    display: grid;
+    place-items: center;
+    backdrop-filter: blur(8px);
+    box-shadow:
+      0 0 40px rgba(255, 122, 0, 0.3),
+      inset 0 0 20px rgba(255, 181, 71, 0.15);
+  }
+  .lock-icon svg { width: 32px; height: 32px; color: var(--amber); }
+  .lock-text {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+
+  /* Unlocked accent: little glow pulse */
+  .poster.unlocked::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(94, 240, 255, 0.2);
+    animation: edgePulse 3s ease-in-out infinite;
+  }
+  @keyframes edgePulse {
+    0%, 100% { box-shadow: inset 0 0 0 1px rgba(94, 240, 255, 0.2); }
+    50% { box-shadow: inset 0 0 0 1px rgba(94, 240, 255, 0.55), 0 0 30px rgba(94, 240, 255, 0.15); }
+  }
+
+  /* Corner marks — VR vibe */
+  .poster .corner {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--elec);
+    opacity: 0.8;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .poster.locked .corner { border-color: var(--amber); }
+  .corner.tl { top: 8px; left: 8px; border-right: 0; border-bottom: 0; }
+  .corner.tr { top: 8px; right: 8px; border-left: 0; border-bottom: 0; }
+  .corner.bl { bottom: 8px; left: 8px; border-right: 0; border-top: 0; }
+  .corner.br { bottom: 8px; right: 8px; border-left: 0; border-top: 0; }
+
+  /* --- Station rows (horizontal) --- */
+  .station-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .station {
+    position: relative;
+    display: grid;
+    grid-template-columns: 160px 1fr auto;
+    gap: 28px;
+    align-items: center;
+    padding: 18px 28px 18px 18px;
+    border-radius: 12px;
+    background: linear-gradient(100deg, rgba(16, 30, 56, 0.7), rgba(10, 18, 36, 0.5));
+    border: 1px solid var(--panel-edge);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    overflow: hidden;
+    animation: slideIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+  .station:nth-child(1) { animation-delay: 0.05s; }
+  .station:nth-child(2) { animation-delay: 0.12s; }
+  .station:nth-child(3) { animation-delay: 0.19s; }
+  .station:nth-child(4) { animation-delay: 0.26s; }
+  .station:nth-child(5) { animation-delay: 0.33s; }
+  .station:nth-child(6) { animation-delay: 0.40s; }
+  .station:nth-child(7) { animation-delay: 0.47s; }
+  .station:nth-child(8) { animation-delay: 0.54s; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .station:hover {
+    border-color: rgba(94, 240, 255, 0.55);
+    background: linear-gradient(100deg, rgba(26, 60, 100, 0.6), rgba(10, 18, 36, 0.6));
+    transform: translateX(4px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(94, 240, 255, 0.12);
+  }
+  .station::before {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--elec), var(--elec-deep));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .station:hover::before { opacity: 1; }
+
+  .station-thumb {
+    width: 160px;
+    height: 96px;
+    border-radius: 8px;
+    background: var(--bg-1);
+    overflow: hidden;
+    border: 1px solid rgba(94, 240, 255, 0.12);
+    position: relative;
+  }
+  .station-thumb svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .station-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .station-num {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+  }
+  .station-title {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.01em;
+    color: #fff;
+  }
+  .station-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    max-width: 680px;
+  }
+  .station-tags {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid rgba(94, 240, 255, 0.2);
+    color: var(--text-dim);
+    background: rgba(94, 240, 255, 0.05);
+  }
+  .tag.i-do { border-color: rgba(94, 240, 255, 0.4); color: var(--elec); }
+  .tag.we-do { border-color: rgba(255, 181, 71, 0.4); color: var(--amber); }
+  .tag.you-do { border-color: rgba(74, 222, 128, 0.4); color: var(--ok); }
+
+  .station-play {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .station-time {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    text-align: right;
+    line-height: 1.5;
+  }
+  .station-time strong {
+    display: block;
+    font-size: 16px;
+    color: var(--text);
+    letter-spacing: 0.05em;
+  }
+  .play-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1.5px solid var(--elec);
+    background: rgba(26, 163, 255, 0.1);
+    color: var(--elec);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.25s ease;
+  }
+  .play-btn:hover {
+    background: var(--elec);
+    color: var(--bg-0);
+    transform: scale(1.08);
+    box-shadow: 0 0 25px rgba(94, 240, 255, 0.6);
+  }
+  .play-btn svg { width: 18px; height: 18px; }
+
+  /* --- Buy modal --- */
+  .modal-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 6, 14, 0.75);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: fadeIn 0.3s ease;
+  }
+  .modal-scrim.open { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    background: linear-gradient(160deg, rgba(14, 22, 40, 0.98), rgba(10, 16, 30, 0.98));
+    border: 1px solid rgba(255, 181, 71, 0.35);
+    border-radius: 14px;
+    padding: 40px 40px 36px;
+    animation: pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow:
+      0 30px 80px rgba(0, 0, 0, 0.7),
+      0 0 60px rgba(255, 122, 0, 0.15);
+    overflow: hidden;
+  }
+  .modal::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--amber), var(--amber-deep), var(--amber), transparent);
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-dim);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.25s ease;
+  }
+  .modal-close:hover { color: #fff; background: rgba(255, 90, 106, 0.15); border-color: var(--danger); }
+  .modal-close svg { width: 14px; height: 14px; }
+
+  .modal-eyebrow {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 10px;
+  }
+  .modal-title {
+    font-family: var(--display);
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.15;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+  .modal-module-name {
+    font-family: var(--display);
+    font-size: 14px;
+    color: var(--elec);
+    letter-spacing: 0.1em;
+    margin-bottom: 24px;
+  }
+  .modal-copy {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+  }
+
+  .price-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 22px;
+    border-radius: 10px;
+    background: rgba(255, 181, 71, 0.08);
+    border: 1px solid rgba(255, 181, 71, 0.25);
+    margin-bottom: 14px;
+  }
+  .price-label {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .price-amount {
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--amber);
+    line-height: 1;
+    margin-top: 4px;
+  }
+  .price-note {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-top: 6px;
+  }
+  .price-bundle {
+    text-align: right;
+  }
+  .price-bundle .save {
+    display: inline-block;
+    margin-top: 4px;
+    font-family: var(--display);
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    background: var(--ok);
+    color: #042;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .modal-features {
+    list-style: none;
+    margin-bottom: 28px;
+  }
+  .modal-features li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--text);
+    border-bottom: 1px dashed rgba(94, 240, 255, 0.08);
+  }
+  .modal-features li:last-child { border-bottom: 0; }
+  .modal-features .check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--elec);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+  }
+  .btn {
+    flex: 1;
+    padding: 14px 22px;
+    font-family: var(--display);
+    font-size: 12px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 0;
+    border-radius: 6px;
+    transition: all 0.25s ease;
+    font-weight: 700;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--amber), var(--amber-deep));
+    color: #1a0d00;
+    box-shadow: 0 0 0 1px rgba(255, 181, 71, 0.6), 0 10px 30px rgba(255, 122, 0, 0.35);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 1px rgba(255, 181, 71, 0.9), 0 14px 40px rgba(255, 122, 0, 0.55);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .btn-ghost:hover {
+    color: #fff;
+    border-color: var(--elec);
+    background: rgba(94, 240, 255, 0.08);
+  }
+
+  /* --- Section chip-style labels --- */
+  .section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--elec);
+    margin-bottom: 12px;
+  }
+  .section-label::before {
+    content: "";
+    width: 28px;
+    height: 1px;
+    background: var(--elec);
+    box-shadow: 0 0 6px var(--elec);
+  }
+
+  /* Responsive tweaks */
+  @media (max-width: 960px) {
+    .hud { padding: 18px 24px; }
+    .hud-meta { display: none; }
+    .stage { padding: 24px 24px 64px; }
+    .breadcrumb { padding: 16px 24px 0; font-size: 10px; }
+    .view-title { font-size: 38px; }
+    .station { grid-template-columns: 100px 1fr auto; padding: 14px; gap: 16px; }
+    .station-thumb { width: 100px; height: 76px; }
+    .station-desc { display: none; }
+  }
+  @media (max-width: 620px) {
+    .grade-grid { grid-template-columns: 1fr; }
+    .station-tags { display: none; }
+    .station-play { flex-direction: column-reverse; gap: 6px; }
+    .station-time { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg"></div>
+<div class="grain"></div>
+<!-- Floating particles -->
+<span class="particle" style="left:8%; animation-duration:16s; animation-delay:0s;"></span>
+<span class="particle" style="left:22%; animation-duration:20s; animation-delay:-4s;"></span>
+<span class="particle" style="left:38%; animation-duration:14s; animation-delay:-8s;"></span>
+<span class="particle" style="left:55%; animation-duration:22s; animation-delay:-2s;"></span>
+<span class="particle" style="left:72%; animation-duration:18s; animation-delay:-10s;"></span>
+<span class="particle" style="left:88%; animation-duration:15s; animation-delay:-6s;"></span>
+<span class="particle" style="left:15%; animation-duration:24s; animation-delay:-14s; background:var(--amber); box-shadow:0 0 8px var(--amber);"></span>
+<span class="particle" style="left:63%; animation-duration:19s; animation-delay:-11s; background:var(--amber); box-shadow:0 0 8px var(--amber);"></span>
+
+<!-- Top HUD -->
+<header class="hud">
+  <div class="hud-brand">
+    <div class="logo-mark">
+      <svg viewBox="0 0 48 48" fill="none">
+        <defs>
+          <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#5ef0ff"/>
+            <stop offset="100%" stop-color="#1aa3ff"/>
+          </linearGradient>
+        </defs>
+        <path d="M18 4 L6 28 H20 L14 44 L42 18 H26 L32 4 Z"
+              fill="url(#logoGrad)" stroke="#5ef0ff" stroke-width="1" stroke-linejoin="round"
+              style="filter: drop-shadow(0 0 6px rgba(94,240,255,0.6));"/>
+      </svg>
+    </div>
+    <div class="brand-titles">
+      <div class="brand-eyebrow">Meta Quest 3 · Education</div>
+      <div class="brand-name">FOUNDATIONS OF ENERGY STORAGE</div>
+    </div>
+  </div>
+  <div class="hud-meta">
+    <span class="meta-pill"><span class="dot"></span>HEADSET LINKED</span>
+    <span class="meta-pill">PROFILE · C. RIVERA</span>
+    <span class="meta-pill" style="color:var(--amber); border-color:rgba(255,181,71,0.3);">◆ 2,340 SPARKS</span>
+  </div>
+</header>
+
+<!-- Breadcrumb -->
+<nav class="breadcrumb" id="breadcrumb">
+  <span class="crumb active" data-nav="grade">Select Grade</span>
+</nav>
+
+<!-- Main stage -->
+<main class="stage">
+
+  <!-- ======== VIEW 1: GRADE LEVEL ======== -->
+  <section class="view active" id="view-grade">
+    <div class="view-header">
+      <div>
+        <div class="section-label">01 · Curriculum Track</div>
+        <h1 class="view-title">Choose your <span class="accent">grade band</span>.</h1>
+        <p class="view-sub">Aligned to NGSS and state energy-literacy standards. Each track adapts the physics depth, vocabulary, and assessment format of every station to the learner.</p>
+      </div>
+    </div>
+
+    <div class="grade-grid" id="gradeGrid"></div>
+  </section>
+
+  <!-- ======== VIEW 2: MODULE SELECT ======== -->
+  <section class="view" id="view-module">
+    <div class="view-header">
+      <div>
+        <div class="section-label">02 · Module Library</div>
+        <h1 class="view-title">Step inside a <span class="accent">module</span>.</h1>
+        <p class="view-sub" id="moduleSubtitle">Eight immersive environments. One unlocked with your starter bundle — unlock the rest to complete the full curriculum.</p>
+      </div>
+      <button class="back-btn" onclick="goTo('grade')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        Back to Grades
+      </button>
+    </div>
+
+    <div class="carousel-wrap">
+      <button class="nav-arrow left" onclick="scrollCarousel('moduleCarousel', -1)" aria-label="Previous">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="carousel" id="moduleCarousel"></div>
+      <button class="nav-arrow right" onclick="scrollCarousel('moduleCarousel', 1)" aria-label="Next">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ======== VIEW 3: STATION SELECT ======== -->
+  <section class="view" id="view-station">
+    <div class="view-header">
+      <div>
+        <div class="section-label" id="stationLabel">03 · Stations</div>
+        <h1 class="view-title" id="stationTitle">Inside the <span class="accent">Battery</span></h1>
+        <p class="view-sub" id="stationSub">Follow the I-Do / We-Do / You-Do progression across six stations. Progress auto-saves to your learner profile.</p>
+      </div>
+      <button class="back-btn" onclick="goTo('module')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        Back to Modules
+      </button>
+    </div>
+
+    <div class="station-list" id="stationList"></div>
+  </section>
+
+</main>
+
+<!-- ======== BUY MODAL ======== -->
+<div class="modal-scrim" id="buyModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeBuy()" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="modal-eyebrow">◆ Locked Module</div>
+    <h2 class="modal-title">Unlock this module.</h2>
+    <div class="modal-module-name" id="modalModuleName">— MODULE NAME —</div>
+    <p class="modal-copy" id="modalCopy">
+      Get instant access to every station, assessment, and teacher dashboard inside this module.
+      Your progress syncs across all headsets on your license.
+    </p>
+
+    <div class="price-row">
+      <div>
+        <div class="price-label">Single Module</div>
+        <div class="price-amount">$29</div>
+        <div class="price-note">Per seat · One-time</div>
+      </div>
+      <div class="price-bundle">
+        <div class="price-label">Full Curriculum</div>
+        <div class="price-amount" style="color:var(--elec);">$149</div>
+        <div class="price-note">All 8 modules</div>
+        <span class="save">Save 36%</span>
+      </div>
+    </div>
+
+    <ul class="modal-features">
+      <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5L20 7"/></svg>Unlimited headset deployments</li>
+      <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5L20 7"/></svg>Teacher dashboard &amp; class analytics</li>
+      <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5L20 7"/></svg>Offline mode for field classrooms</li>
+      <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5L20 7"/></svg>Free content updates</li>
+    </ul>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeBuy()">Maybe Later</button>
+      <button class="btn btn-primary" onclick="closeBuy()">Unlock Now</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DATA
+============================================================ */
+
+const GRADES = [
+  {
+    id: 'elementary',
+    eyebrow: 'Grades 3 – 5',
+    title: 'Spark Scouts',
+    desc: 'Story-driven intro for curious young builders. Energy as adventure.',
+    accent: '#ffb547',
+    accent2: '#ff7a00',
+    art: makeGradeArt('spark'),
+  },
+  {
+    id: 'middle',
+    eyebrow: 'Grades 6 – 8',
+    title: 'Circuit Engineers',
+    desc: 'NGSS-aligned middle school track. Hands-on circuits and energy transfer.',
+    accent: '#5ef0ff',
+    accent2: '#1aa3ff',
+    art: makeGradeArt('middle'),
+  },
+  {
+    id: 'high',
+    eyebrow: 'Grades 9 – 12',
+    title: 'Power Architects',
+    desc: 'AP-ready depth: Ohm\u2019s Law, KCL, thermodynamics, grid dynamics.',
+    accent: '#a78bfa',
+    accent2: '#6d28d9',
+    art: makeGradeArt('high'),
+  },
+  {
+    id: 'college',
+    eyebrow: 'Post-Secondary',
+    title: 'Energy Technicians',
+    desc: 'Trade school &amp; CTE pathway. EV, grid, and battery tech certification prep.',
+    accent: '#4ade80',
+    accent2: '#16a34a',
+    art: makeGradeArt('college'),
+  },
+];
+
+/* Modules — matches the curriculum doc. Only "Inside The Battery" is unlocked. */
+const MODULES = [
+  {
+    id: 'battery',
+    eyebrow: 'Module 01',
+    title: 'Inside the Battery',
+    desc: 'Tear down cells, trace ion flow, compare chemistries. Your starter lab.',
+    unlocked: true,
+    progress: 0.28,
+    accent: '#5ef0ff',
+    accent2: '#1aa3ff',
+    stations: [
+      { n: '01', title: 'Battery Lab', desc: 'Handle six battery chemistries and dig into specs, cycle life, and real-world applications for each one.', tag: 'I Do', time: '8 min' },
+      { n: '02', title: 'Exploded View', desc: 'A cinematic I-Do walkthrough of cell internals — cathode, anode, separator, and electrolyte — layer by layer.', tag: 'I Do', time: '6 min' },
+      { n: '03', title: 'Ion Flow Zoom', desc: 'Shrink down to the molecular scale and watch lithium ions migrate during charge and discharge.', tag: 'We Do', time: '7 min' },
+      { n: '04', title: 'Virtual Tear Down', desc: 'Open real batteries in VR, identify each internal component, and reassemble them correctly.', tag: 'You Do', time: '12 min' },
+      { n: '05', title: 'Battery Selection Challenge', desc: 'A customer walks up to your help window. Choose the right battery for their scenario and defend your reasoning.', tag: 'You Do', time: '10 min' },
+    ],
+  },
+  {
+    id: 'dc',
+    eyebrow: 'Module 02',
+    title: 'DC Circuit Workbench',
+    desc: 'From water analogy to schematics. Build, break, measure, master.',
+    unlocked: false,
+    progress: 0,
+    accent: '#ffb547',
+    accent2: '#ff7a00',
+    stations: [
+      { n: '01', title: 'Water Analogy', desc: 'See voltage, current, and resistance as pressure, flow, and pipe width.', tag: 'I Do', time: '6 min' },
+      { n: '02', title: 'First Circuit Build', desc: 'Wire your very first closed-loop circuit with a battery, switch, and bulb.', tag: 'We Do', time: '8 min' },
+      { n: '03', title: 'Virtual Multimeter', desc: 'Learn to measure V, I, and R safely — and how probe placement changes everything.', tag: 'We Do', time: '7 min' },
+      { n: '04', title: "Ohm's Law Playground", desc: 'Drag sliders, watch V = IR in real time. Predict, then verify.', tag: 'We Do', time: '9 min' },
+      { n: '05', title: 'Switch Explorer', desc: 'SPST, SPDT, DPDT — see what each switch actually does to a live circuit.', tag: 'We Do', time: '5 min' },
+      { n: '06', title: 'Short Circuit Sim', desc: 'Safely observe the consequences of a short, including a slow-motion meltdown.', tag: 'We Do', time: '6 min' },
+      { n: '07', title: 'Schematics to Build', desc: 'Read a schematic, build the real thing on the workbench. Five escalating puzzles.', tag: 'You Do', time: '14 min' },
+    ],
+  },
+  {
+    id: 'seriespar',
+    eyebrow: 'Module 03',
+    title: 'Series & Parallel Circuits',
+    desc: 'Junctions, loops, and Kirchhoff. Holiday lights included.',
+    unlocked: false,
+    progress: 0,
+    accent: '#a78bfa',
+    accent2: '#6d28d9',
+    stations: [
+      { n: '01', title: 'Side-by-Side', desc: 'See identical components wired in series vs. parallel, compared in real time.', tag: 'I Do', time: '6 min' },
+      { n: '02', title: 'KCL Junction', desc: 'Watch current split and rejoin at a node — Kirchhoff\u2019s Current Law made visible.', tag: 'We Do', time: '8 min' },
+      { n: '03', title: 'Holiday Lights', desc: 'Unscrew one bulb. Everything goes dark (or not). Debug the wiring.', tag: 'We Do', time: '7 min' },
+      { n: '04', title: 'Mixed Circuit Sandbox', desc: 'Build hybrid series-parallel topologies and predict the outcome before you test.', tag: 'You Do', time: '12 min' },
+      { n: '05', title: 'Full Analysis Challenge', desc: 'Given a schematic, solve every current and voltage in the network. Timed.', tag: 'You Do', time: '15 min' },
+    ],
+  },
+  {
+    id: 'whatis',
+    eyebrow: 'Module 04',
+    title: 'What Is Energy? Gallery',
+    desc: 'A museum of energy forms, alcoves, and a Rube Goldberg finale.',
+    unlocked: false,
+    progress: 0,
+    accent: '#4ade80',
+    accent2: '#16a34a',
+    stations: [
+      { n: '01', title: 'Energy Museum', desc: 'An atrium introducing every major form of energy with gallery-style exhibits.', tag: 'I Do', time: '8 min' },
+      { n: '02', title: 'Thermal Alcove', desc: 'Thermal expansion, phase change, molecular kinetics, and specific heat — all in one room.', tag: 'We Do', time: '10 min' },
+      { n: '03', title: 'Kinetic Alcove', desc: 'Pendulums, flywheels, and crash tests. Potential converts to kinetic in front of you.', tag: 'We Do', time: '9 min' },
+      { n: '04', title: 'Chemical Alcove', desc: 'Combustion, photosynthesis, and battery conversion as three sides of the same idea.', tag: 'We Do', time: '9 min' },
+      { n: '05', title: 'Electrical Alcove', desc: 'Turbines, circuits, conduction, induction — the bridge to the rest of this curriculum.', tag: 'We Do', time: '9 min' },
+      { n: '06', title: 'Transform Chain Table', desc: 'Chain multiple energy transformations and watch efficiency losses at each step.', tag: 'You Do', time: '8 min' },
+      { n: '07', title: 'Units & Scale Station', desc: 'Joules, kilowatt-hours, calories — compared across orders of magnitude.', tag: 'I Do', time: '6 min' },
+      { n: '08', title: 'Rube Goldberg Machine', desc: 'The finale. Trace an entire energy chain across a massive contraption — and fix the broken links.', tag: 'You Do', time: '16 min' },
+    ],
+  },
+  {
+    id: 'material',
+    eyebrow: 'Module 05',
+    title: 'Material Science',
+    desc: 'Why copper conducts, plastic insulates, and silicon does both.',
+    unlocked: false,
+    progress: 0,
+    accent: '#fb7185',
+    accent2: '#be123c',
+    stations: [
+      { n: '01', title: 'Conductors: Cu Lattice', desc: 'Step inside a copper crystal and watch electrons swim through the sea of delocalized charge.', tag: 'I Do', time: '7 min' },
+      { n: '02', title: 'Insulators: Breakdown', desc: 'Ramp the voltage on rubber, glass, and air until the electrons finally break through.', tag: 'We Do', time: '8 min' },
+      { n: '03', title: 'Semiconductors: Doping', desc: 'Add phosphorus or boron to silicon and see n-type and p-type behavior emerge.', tag: 'We Do', time: '9 min' },
+      { n: '04', title: 'Resistance Lab', desc: 'R = \u03C1L/A. Change each variable and watch resistance respond in real time.', tag: 'We Do', time: '8 min' },
+      { n: '05', title: 'Wire the House', desc: 'Pick the right gauge and material for every circuit in a full-scale VR home.', tag: 'You Do', time: '14 min' },
+    ],
+  },
+  {
+    id: 'powersource',
+    eyebrow: 'Module 06',
+    title: 'Where Does Our Power Come From?',
+    desc: 'Solar, wind, gas, nuclear. Run the control room.',
+    unlocked: false,
+    progress: 0,
+    accent: '#fbbf24',
+    accent2: '#d97706',
+    stations: [
+      { n: '01', title: 'Grid Control Room', desc: 'The overview hub. Watch live supply and demand across a regional grid.', tag: 'I Do', time: '7 min' },
+      { n: '02', title: 'Solar Farm', desc: 'Stand in a sea of panels. Track generation as clouds pass overhead.', tag: 'We Do', time: '8 min' },
+      { n: '03', title: 'Wind Farm', desc: 'Feel the turbines spin. Wind speed cubes the power output — see why.', tag: 'We Do', time: '8 min' },
+      { n: '04', title: 'Gas Plant', desc: 'Follow natural gas from pipeline to turbine to grid, with emissions visualized.', tag: 'We Do', time: '9 min' },
+      { n: '05', title: 'Nuclear / Coal', desc: 'Compare a reactor and a boiler side by side. Same goal, very different fuel cycle.', tag: 'We Do', time: '10 min' },
+      { n: '06', title: 'Facility Comparison', desc: 'Cost, emissions, footprint, ramp speed — rank every source by the metric that matters.', tag: 'You Do', time: '10 min' },
+      { n: '07', title: 'Grid Operator Sim', desc: 'Balance load against demand for 24 simulated hours. Don\u2019t cause a blackout.', tag: 'You Do', time: '18 min' },
+    ],
+  },
+  {
+    id: 'grid',
+    eyebrow: 'Module 07',
+    title: 'The Electric Grid · Ride the Electron',
+    desc: 'Shrink down. Ride an electron from generator to outlet.',
+    unlocked: false,
+    progress: 0,
+    accent: '#38bdf8',
+    accent2: '#0369a1',
+    stations: [
+      { n: '01', title: 'Generator · 13.8 kV', desc: 'Inside a spinning rotor as induction creates three-phase AC from scratch.', tag: 'I Do', time: '7 min' },
+      { n: '02', title: 'Step-Up to 345 kV', desc: 'Why we boost voltage before transmission — and what a big transformer actually does.', tag: 'We Do', time: '8 min' },
+      { n: '03', title: 'Substation Step-Down', desc: 'Ride the electron as it drops back to 13.8 kV for local distribution.', tag: 'We Do', time: '8 min' },
+      { n: '04', title: 'Distribution to Home', desc: 'Pole-top transformer to service drop to meter. The last mile.', tag: 'We Do', time: '8 min' },
+      { n: '05', title: 'Panel to Outlet', desc: 'Inside the breaker panel, through the wall, out the receptacle. You\u2019re home.', tag: 'We Do', time: '7 min' },
+      { n: '06', title: 'Transform Lab', desc: 'Build your own transformer, adjust turns ratios, and read the secondary voltage.', tag: 'You Do', time: '12 min' },
+    ],
+  },
+  {
+    id: 'mobility',
+    eyebrow: 'Module 08',
+    title: 'Electric Mobility',
+    desc: 'Transparent EVs, regen braking, and the real cost of a charge.',
+    unlocked: false,
+    progress: 0,
+    accent: '#34d399',
+    accent2: '#047857',
+    stations: [
+      { n: '01', title: 'Transparent EV', desc: 'Strip away the body panels. See the pack, the motor, and the power electronics at work.', tag: 'I Do', time: '8 min' },
+      { n: '02', title: 'Drive Simulator', desc: 'Get behind the wheel. Feel torque delivery and watch state-of-charge drop in real time.', tag: 'We Do', time: '10 min' },
+      { n: '03', title: 'Regen Braking Deep Dive', desc: 'How kinetic energy flows backward into the pack — and why not all of it makes it home.', tag: 'We Do', time: '8 min' },
+      { n: '04', title: 'Charging Stations', desc: 'Level 1, Level 2, and DC fast charging compared on the same vehicle.', tag: 'We Do', time: '8 min' },
+      { n: '05', title: 'Charging Curves', desc: 'Why does fast charging slow down near full? Watch the curve and read the thermal data.', tag: 'We Do', time: '9 min' },
+      { n: '06', title: 'EV Economics Challenge', desc: 'Route an EV across a region on a fixed budget. Charger choice matters.', tag: 'You Do', time: '16 min' },
+    ],
+  },
+];
+
+/* ============================================================
+   SVG ART GENERATORS
+============================================================ */
+
+function makeGradeArt(kind) {
+  const arts = {
+    spark: `
+      <svg viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="sparkBG" cx="50%" cy="38%" r="70%">
+            <stop offset="0%" stop-color="#ffb547" stop-opacity="0.45"/>
+            <stop offset="50%" stop-color="#ff7a00" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="#0a0f1c"/>
+          </radialGradient>
+          <linearGradient id="sparkBolt" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#fff7e0"/>
+            <stop offset="100%" stop-color="#ff7a00"/>
+          </linearGradient>
+        </defs>
+        <rect width="300" height="420" fill="url(#sparkBG)"/>
+        <!-- sparkles -->
+        <g fill="#ffd97a" opacity="0.9">
+          <circle cx="60" cy="80" r="2"/><circle cx="240" cy="120" r="3"/><circle cx="210" cy="60" r="1.5"/>
+          <circle cx="90" cy="200" r="1.5"/><circle cx="260" cy="220" r="2"/><circle cx="40" cy="260" r="2.5"/>
+        </g>
+        <!-- cartoon bolt -->
+        <path d="M155 90 L105 210 L150 210 L120 310 L210 175 L160 175 L195 90 Z"
+              fill="url(#sparkBolt)" stroke="#fff2c2" stroke-width="1.5" stroke-linejoin="round"
+              style="filter: drop-shadow(0 0 14px rgba(255,181,71,0.7));"/>
+        <circle cx="150" cy="200" r="120" fill="none" stroke="#ffb547" stroke-width="1" stroke-dasharray="4 6" opacity="0.4"/>
+      </svg>`,
+    middle: `
+      <svg viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="midBG" cx="50%" cy="40%" r="70%">
+            <stop offset="0%" stop-color="#5ef0ff" stop-opacity="0.45"/>
+            <stop offset="50%" stop-color="#1aa3ff" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="#0a0f1c"/>
+          </radialGradient>
+        </defs>
+        <rect width="300" height="420" fill="url(#midBG)"/>
+        <!-- circuit board pattern -->
+        <g stroke="#5ef0ff" stroke-width="1.2" fill="none" opacity="0.6">
+          <path d="M40 120 H110 V80 H180"/>
+          <path d="M180 80 V160 H260"/>
+          <path d="M60 200 H140 V260 H230"/>
+          <path d="M40 300 V340 H120"/>
+        </g>
+        <g fill="#5ef0ff">
+          <circle cx="40" cy="120" r="3"/><circle cx="110" cy="120" r="3"/><circle cx="110" cy="80" r="3"/>
+          <circle cx="180" cy="80" r="3"/><circle cx="180" cy="160" r="3"/><circle cx="260" cy="160" r="3"/>
+          <circle cx="60" cy="200" r="3"/><circle cx="140" cy="200" r="3"/><circle cx="140" cy="260" r="3"/>
+          <circle cx="230" cy="260" r="3"/><circle cx="40" cy="300" r="3"/><circle cx="120" cy="340" r="3"/>
+        </g>
+        <!-- center chip -->
+        <rect x="115" y="175" width="70" height="70" rx="6" fill="#0a1f38" stroke="#5ef0ff" stroke-width="1.5"
+              style="filter: drop-shadow(0 0 12px rgba(94,240,255,0.55));"/>
+        <text x="150" y="216" text-anchor="middle" fill="#5ef0ff" font-family="Chakra Petch, sans-serif" font-size="13" font-weight="700" letter-spacing="2">DC-6</text>
+      </svg>`,
+    high: `
+      <svg viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="highBG" cx="50%" cy="40%" r="70%">
+            <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/>
+            <stop offset="50%" stop-color="#6d28d9" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="#0a0f1c"/>
+          </radialGradient>
+        </defs>
+        <rect width="300" height="420" fill="url(#highBG)"/>
+        <!-- sine waves -->
+        <g fill="none" stroke="#a78bfa" stroke-width="1.5">
+          <path d="M0 140 Q 37 90 75 140 T 150 140 T 225 140 T 300 140" opacity="0.85"/>
+          <path d="M0 210 Q 25 160 50 210 T 100 210 T 150 210 T 200 210 T 250 210 T 300 210" opacity="0.65"/>
+          <path d="M0 280 Q 18 240 37 280 T 75 280 T 112 280 T 150 280 T 187 280 T 225 280 T 262 280 T 300 280" opacity="0.45"/>
+        </g>
+        <!-- central formula -->
+        <g style="filter: drop-shadow(0 0 10px rgba(167,139,250,0.7));">
+          <text x="150" y="230" text-anchor="middle" fill="#fff" font-family="Chakra Petch, sans-serif" font-size="42" font-weight="700">V=IR</text>
+        </g>
+        <!-- spark marks -->
+        <g stroke="#a78bfa" stroke-width="1" fill="none" opacity="0.6">
+          <path d="M50 340 L60 320 L55 320 L65 305"/>
+          <path d="M230 340 L240 320 L235 320 L245 305"/>
+        </g>
+      </svg>`,
+    college: `
+      <svg viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="colBG" cx="50%" cy="40%" r="70%">
+            <stop offset="0%" stop-color="#4ade80" stop-opacity="0.4"/>
+            <stop offset="50%" stop-color="#16a34a" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="#0a0f1c"/>
+          </radialGradient>
+        </defs>
+        <rect width="300" height="420" fill="url(#colBG)"/>
+        <!-- hard hat silhouette-ish EV/grid fusion -->
+        <g stroke="#4ade80" stroke-width="1.4" fill="none" opacity="0.8">
+          <!-- pylon -->
+          <path d="M90 340 L150 120 L210 340"/>
+          <path d="M105 300 L195 300"/>
+          <path d="M115 260 L185 260"/>
+          <path d="M125 220 L175 220"/>
+          <path d="M135 180 L165 180"/>
+        </g>
+        <!-- wires -->
+        <g stroke="#4ade80" stroke-width="0.8" fill="none" opacity="0.55">
+          <path d="M60 300 Q 105 320 105 300"/>
+          <path d="M240 300 Q 195 320 195 300"/>
+        </g>
+        <!-- certification badge -->
+        <g transform="translate(150 220)">
+          <circle r="48" fill="#0a1f12" stroke="#4ade80" stroke-width="1.5"
+                  style="filter: drop-shadow(0 0 10px rgba(74,222,128,0.55));"/>
+          <text y="5" text-anchor="middle" fill="#4ade80" font-family="Chakra Petch, sans-serif" font-size="14" font-weight="700" letter-spacing="2">CTE</text>
+          <text y="22" text-anchor="middle" fill="#4ade80" font-family="Chakra Petch, sans-serif" font-size="9" letter-spacing="3">PRO</text>
+        </g>
+      </svg>`,
+  };
+  return arts[kind];
+}
+
+function makeModuleArt(id, c1, c2) {
+  const base = (inner) => `
+    <svg viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="mgrad_${id}" cx="50%" cy="38%" r="70%">
+          <stop offset="0%" stop-color="${c1}" stop-opacity="0.5"/>
+          <stop offset="55%" stop-color="${c2}" stop-opacity="0.2"/>
+          <stop offset="100%" stop-color="#0a0f1c"/>
+        </radialGradient>
+      </defs>
+      <rect width="300" height="420" fill="url(#mgrad_${id})"/>
+      ${inner}
+    </svg>`;
+
+  const glow = `style="filter: drop-shadow(0 0 12px ${c1});"`;
+
+  const arts = {
+    battery: base(`
+      <g transform="translate(150 200)" ${glow}>
+        <!-- battery body -->
+        <rect x="-70" y="-100" width="140" height="200" rx="10" fill="#0a1f3a" stroke="${c1}" stroke-width="2"/>
+        <rect x="-30" y="-115" width="60" height="18" rx="3" fill="${c1}"/>
+        <!-- internal layers -->
+        <rect x="-58" y="-85" width="116" height="15" rx="2" fill="${c1}" opacity="0.75"/>
+        <rect x="-58" y="-65" width="116" height="12" rx="2" fill="${c2}" opacity="0.55"/>
+        <rect x="-58" y="-48" width="116" height="15" rx="2" fill="${c1}" opacity="0.75"/>
+        <rect x="-58" y="-28" width="116" height="12" rx="2" fill="${c2}" opacity="0.55"/>
+        <rect x="-58" y="-11" width="116" height="15" rx="2" fill="${c1}" opacity="0.75"/>
+        <rect x="-58" y="9"  width="116" height="12" rx="2" fill="${c2}" opacity="0.55"/>
+        <rect x="-58" y="26" width="116" height="15" rx="2" fill="${c1}" opacity="0.75"/>
+        <rect x="-58" y="46" width="116" height="12" rx="2" fill="${c2}" opacity="0.55"/>
+        <!-- ion dots -->
+        <g fill="#fff">
+          <circle cx="-40" cy="-30" r="2"/><circle cx="0" cy="-10" r="2"/><circle cx="30" cy="20" r="2"/>
+          <circle cx="-20" cy="40" r="2"/><circle cx="40" cy="-50" r="2"/>
+        </g>
+        <!-- plus/minus -->
+        <text x="0" y="-55" text-anchor="middle" fill="#fff" font-family="Chakra Petch" font-size="18" font-weight="700">+</text>
+        <text x="0" y="80" text-anchor="middle" fill="#fff" font-family="Chakra Petch" font-size="22" font-weight="700">–</text>
+      </g>
+    `),
+    dc: base(`
+      <g fill="none" stroke="${c1}" stroke-width="2" transform="translate(30 80)" ${glow}>
+        <!-- simple circuit -->
+        <rect x="0" y="0" width="240" height="200" rx="6" opacity="0"/>
+        <path d="M40 40 H200 V160 H40 Z"/>
+        <!-- battery -->
+        <g transform="translate(120 30)">
+          <line x1="-10" y1="0" x2="-10" y2="20" stroke-width="3"/>
+          <line x1="0" y1="-4" x2="0" y2="24" stroke-width="1.5"/>
+          <line x1="10" y1="0" x2="10" y2="20" stroke-width="3"/>
+          <line x1="20" y1="-4" x2="20" y2="24" stroke-width="1.5"/>
+        </g>
+        <!-- resistor zigzag -->
+        <path d="M40 100 L55 90 L60 110 L65 90 L70 110 L75 90 L80 110 L85 90 L90 100" stroke-width="2"/>
+        <!-- bulb -->
+        <circle cx="200" cy="100" r="14" fill="${c1}" opacity="0.3"/>
+        <circle cx="200" cy="100" r="14" stroke="${c1}" stroke-width="2"/>
+        <path d="M192 96 L208 104 M192 104 L208 96" stroke-width="1.5"/>
+      </g>
+      <!-- label -->
+      <text x="150" y="320" text-anchor="middle" fill="${c1}" font-family="Chakra Petch" font-size="16" font-weight="600" letter-spacing="4">DC</text>
+    `),
+    seriespar: base(`
+      <g fill="none" stroke="${c1}" stroke-width="1.8" transform="translate(30 90)" ${glow}>
+        <!-- Series -->
+        <path d="M20 40 H200"/>
+        <g transform="translate(60 40)">
+          <circle r="10" fill="#0a1f3a"/><path d="M-4 -4 L4 4 M-4 4 L4 -4"/>
+        </g>
+        <g transform="translate(110 40)">
+          <circle r="10" fill="#0a1f3a"/><path d="M-4 -4 L4 4 M-4 4 L4 -4"/>
+        </g>
+        <g transform="translate(160 40)">
+          <circle r="10" fill="#0a1f3a"/><path d="M-4 -4 L4 4 M-4 4 L4 -4"/>
+        </g>
+        <text x="110" y="20" text-anchor="middle" fill="${c1}" font-family="Chakra Petch" font-size="10" letter-spacing="3">SERIES</text>
+        <!-- Parallel -->
+        <g transform="translate(0 100)">
+          <path d="M20 40 H200"/>
+          <path d="M60 40 V80 H160 V40"/>
+          <path d="M60 80 V110 H160 V80"/>
+          <g transform="translate(110 40)"><circle r="10" fill="#0a1f3a"/><path d="M-4 -4 L4 4 M-4 4 L4 -4"/></g>
+          <g transform="translate(110 80)"><circle r="10" fill="#0a1f3a"/><path d="M-4 -4 L4 4 M-4 4 L4 -4"/></g>
+          <g transform="translate(110 110)"><circle r="10" fill="#0a1f3a"/><path d="M-4 -4 L4 4 M-4 4 L4 -4"/></g>
+          <text x="110" y="20" text-anchor="middle" fill="${c1}" font-family="Chakra Petch" font-size="10" letter-spacing="3">PARALLEL</text>
+        </g>
+      </g>
+    `),
+    whatis: base(`
+      <!-- orbiting energy forms around central node -->
+      <g transform="translate(150 210)" ${glow}>
+        <circle r="70" fill="none" stroke="${c1}" stroke-width="1" stroke-dasharray="3 5" opacity="0.45"/>
+        <circle r="110" fill="none" stroke="${c1}" stroke-width="1" stroke-dasharray="2 6" opacity="0.3"/>
+        <!-- icons -->
+        <g transform="translate(0 -70)" fill="${c1}">
+          <circle r="11" fill="#0a1f12" stroke="${c1}"/><text y="4" text-anchor="middle" font-family="Chakra Petch" font-size="10" fill="${c1}">K</text>
+        </g>
+        <g transform="translate(70 0)" fill="${c1}">
+          <circle r="11" fill="#0a1f12" stroke="${c1}"/><text y="4" text-anchor="middle" font-family="Chakra Petch" font-size="10" fill="${c1}">E</text>
+        </g>
+        <g transform="translate(0 70)" fill="${c1}">
+          <circle r="11" fill="#0a1f12" stroke="${c1}"/><text y="4" text-anchor="middle" font-family="Chakra Petch" font-size="10" fill="${c1}">T</text>
+        </g>
+        <g transform="translate(-70 0)" fill="${c1}">
+          <circle r="11" fill="#0a1f12" stroke="${c1}"/><text y="4" text-anchor="middle" font-family="Chakra Petch" font-size="10" fill="${c1}">C</text>
+        </g>
+        <!-- center -->
+        <circle r="24" fill="${c1}" opacity="0.18"/>
+        <circle r="24" fill="none" stroke="${c1}" stroke-width="1.5"/>
+        <text y="6" text-anchor="middle" fill="#fff" font-family="Chakra Petch" font-size="18" font-weight="700">∞</text>
+      </g>
+    `),
+    material: base(`
+      <!-- crystal lattice -->
+      <g transform="translate(150 210)" ${glow}>
+        ${[[-70,-60],[-35,-60],[0,-60],[35,-60],[70,-60],
+            [-70,-20],[-35,-20],[0,-20],[35,-20],[70,-20],
+            [-70,20],[-35,20],[0,20],[35,20],[70,20],
+            [-70,60],[-35,60],[0,60],[35,60],[70,60]].map(([x,y]) =>
+              `<circle cx="${x}" cy="${y}" r="6" fill="${c1}" opacity="0.85"/>`).join('')}
+        <!-- bonds -->
+        <g stroke="${c1}" stroke-width="1" opacity="0.4">
+          <path d="M-70 -60 L70 -60 M-70 -20 L70 -20 M-70 20 L70 20 M-70 60 L70 60"/>
+          <path d="M-70 -60 L-70 60 M-35 -60 L-35 60 M0 -60 L0 60 M35 -60 L35 60 M70 -60 L70 60"/>
+        </g>
+        <!-- electron -->
+        <circle cx="15" cy="0" r="3" fill="#fff">
+          <animate attributeName="cx" values="-70;70;-70" dur="4s" repeatCount="indefinite"/>
+          <animate attributeName="cy" values="-20;20;-20" dur="3s" repeatCount="indefinite"/>
+        </circle>
+      </g>
+    `),
+    powersource: base(`
+      <g transform="translate(0 0)" ${glow}>
+        <!-- sun -->
+        <g transform="translate(70 130)">
+          <circle r="22" fill="${c1}" opacity="0.3"/>
+          <circle r="22" fill="none" stroke="${c1}" stroke-width="2"/>
+          <g stroke="${c1}" stroke-width="2">
+            <line x1="0" y1="-30" x2="0" y2="-38"/><line x1="0" y1="30" x2="0" y2="38"/>
+            <line x1="-30" y1="0" x2="-38" y2="0"/><line x1="30" y1="0" x2="38" y2="0"/>
+            <line x1="-21" y1="-21" x2="-27" y2="-27"/><line x1="21" y1="21" x2="27" y2="27"/>
+            <line x1="-21" y1="21" x2="-27" y2="27"/><line x1="21" y1="-21" x2="27" y2="-27"/>
+          </g>
+        </g>
+        <!-- wind turbine -->
+        <g transform="translate(230 160)" stroke="${c1}" stroke-width="2" fill="none">
+          <line x1="0" y1="0" x2="0" y2="110"/>
+          <g transform="rotate(0)">
+            <path d="M0 0 L 0 -40" stroke-width="4"/>
+            <path d="M0 0 L 34 20" stroke-width="4"/>
+            <path d="M0 0 L -34 20" stroke-width="4"/>
+          </g>
+          <circle r="5" fill="${c1}"/>
+        </g>
+        <!-- cooling tower -->
+        <g transform="translate(150 220)" stroke="${c1}" stroke-width="2" fill="none">
+          <path d="M-18 0 L -22 40 Q 0 50 22 40 L 18 0 Z"/>
+          <ellipse cx="0" cy="0" rx="18" ry="5" fill="#0a1f3a"/>
+          <path d="M-8 -5 Q 0 -18 8 -5" fill="none" stroke="${c1}" stroke-width="1.5" opacity="0.6"/>
+          <path d="M-12 -15 Q 0 -30 12 -15" fill="none" stroke="${c1}" stroke-width="1.5" opacity="0.4"/>
+        </g>
+      </g>
+    `),
+    grid: base(`
+      <!-- transmission tower -->
+      <g transform="translate(150 210)" stroke="${c1}" stroke-width="1.8" fill="none" ${glow}>
+        <path d="M-50 130 L0 -120 L50 130"/>
+        <path d="M-50 130 L50 130"/>
+        <path d="M-30 50 L30 50"/>
+        <path d="M-38 10 L38 10"/>
+        <path d="M-44 -30 L44 -30"/>
+        <path d="M-50 -70 L50 -70"/>
+        <!-- cross-braces -->
+        <path d="M-30 50 L0 10 M 30 50 L 0 10"/>
+        <path d="M-38 10 L0 -30 M 38 10 L 0 -30"/>
+        <path d="M-44 -30 L0 -70 M 44 -30 L 0 -70"/>
+        <!-- insulators -->
+        <g fill="${c1}" stroke="none">
+          <circle cx="-30" cy="55" r="2.5"/><circle cx="30" cy="55" r="2.5"/>
+          <circle cx="-38" cy="15" r="2.5"/><circle cx="38" cy="15" r="2.5"/>
+          <circle cx="-44" cy="-25" r="2.5"/><circle cx="44" cy="-25" r="2.5"/>
+        </g>
+        <!-- wires -->
+        <g stroke="${c1}" stroke-width="0.8" opacity="0.6">
+          <path d="M-90 60 Q -60 70 -30 55 T 30 55 Q 60 70 90 60"/>
+          <path d="M-90 20 Q -60 30 -38 15 T 38 15 Q 60 30 90 20"/>
+          <path d="M-90 -20 Q -60 -10 -44 -25 T 44 -25 Q 60 -10 90 -20"/>
+        </g>
+      </g>
+    `),
+    mobility: base(`
+      <!-- car silhouette side view -->
+      <g transform="translate(40 200)" ${glow}>
+        <path d="M0 40 Q 20 10 70 8 L 100 -20 L 160 -20 L 190 8 Q 210 10 220 40 L 220 60 L 0 60 Z"
+              fill="${c1}" opacity="0.22" stroke="${c1}" stroke-width="2"/>
+        <!-- window -->
+        <path d="M75 8 L105 -15 L155 -15 L185 8 Z" fill="#0a1f3a" stroke="${c1}" stroke-width="1.5"/>
+        <!-- wheels -->
+        <circle cx="50" cy="60" r="18" fill="#0a1f3a" stroke="${c1}" stroke-width="2"/>
+        <circle cx="170" cy="60" r="18" fill="#0a1f3a" stroke="${c1}" stroke-width="2"/>
+        <circle cx="50" cy="60" r="7" fill="${c1}"/>
+        <circle cx="170" cy="60" r="7" fill="${c1}"/>
+        <!-- battery pack indicator -->
+        <rect x="60" y="30" width="100" height="12" rx="2" fill="${c1}" opacity="0.35" stroke="${c1}" stroke-width="1"/>
+        <rect x="62" y="32" width="60" height="8" rx="1" fill="${c1}"/>
+      </g>
+      <!-- plug -->
+      <g transform="translate(210 80)" stroke="${c1}" stroke-width="2" fill="none" ${glow}>
+        <path d="M0 0 L -30 30"/>
+        <circle cx="0" cy="0" r="10" fill="${c1}" opacity="0.3"/>
+        <path d="M-5 -4 L-5 4 M 5 -4 L 5 4" stroke-width="2.5"/>
+      </g>
+    `),
+  };
+  return arts[id] || base('');
+}
+
+function makeStationThumb(moduleId, idx, c1, c2) {
+  // Small horizontal-rectangle artwork, distinct variations per station index
+  const variants = [
+    // variant 0 — pulse wave
+    `<svg viewBox="0 0 160 96" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="tg0_${moduleId}_${idx}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${c1}" stop-opacity="0.35"/><stop offset="100%" stop-color="${c2}" stop-opacity="0.05"/>
+      </linearGradient></defs>
+      <rect width="160" height="96" fill="url(#tg0_${moduleId}_${idx})"/>
+      <path d="M0 48 Q 20 48 20 30 T 40 48 T 60 66 T 80 30 T 100 48 T 120 66 T 140 48 T 160 48" stroke="${c1}" stroke-width="1.5" fill="none" opacity="0.85"/>
+    </svg>`,
+    // variant 1 — grid dots
+    `<svg viewBox="0 0 160 96" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <rect width="160" height="96" fill="${c2}" fill-opacity="0.1"/>
+      <g fill="${c1}">
+        ${[...Array(6)].map((_,r)=>[...Array(10)].map((_,c)=>`<circle cx="${12+c*16}" cy="${12+r*16}" r="1.5" opacity="${0.2+Math.abs(Math.sin((r+c+idx)*0.9))*0.6}"/>`).join('')).join('')}
+      </g>
+    </svg>`,
+    // variant 2 — diagonal beams
+    `<svg viewBox="0 0 160 96" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <rect width="160" height="96" fill="${c2}" fill-opacity="0.12"/>
+      <g stroke="${c1}" stroke-width="1" opacity="0.6">
+        <line x1="-20" y1="96" x2="80" y2="-10"/>
+        <line x1="10" y1="96" x2="110" y2="-10"/>
+        <line x1="40" y1="96" x2="140" y2="-10"/>
+        <line x1="70" y1="96" x2="170" y2="-10"/>
+      </g>
+      <circle cx="80" cy="48" r="14" fill="${c1}" opacity="0.3"/>
+      <circle cx="80" cy="48" r="14" fill="none" stroke="${c1}" stroke-width="1.5"/>
+    </svg>`,
+    // variant 3 — hex
+    `<svg viewBox="0 0 160 96" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <rect width="160" height="96" fill="${c2}" fill-opacity="0.1"/>
+      <g fill="none" stroke="${c1}" stroke-width="1.2" opacity="0.75">
+        <polygon points="80,20 100,32 100,56 80,68 60,56 60,32"/>
+        <polygon points="40,44 52,52 52,68 40,76 28,68 28,52" opacity="0.5"/>
+        <polygon points="120,44 132,52 132,68 120,76 108,68 108,52" opacity="0.5"/>
+      </g>
+    </svg>`,
+    // variant 4 — radial
+    `<svg viewBox="0 0 160 96" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs><radialGradient id="tg4_${moduleId}_${idx}" cx="50%" cy="50%" r="60%">
+        <stop offset="0%" stop-color="${c1}" stop-opacity="0.55"/><stop offset="100%" stop-color="${c2}" stop-opacity="0"/>
+      </radialGradient></defs>
+      <rect width="160" height="96" fill="${c2}" fill-opacity="0.1"/>
+      <rect width="160" height="96" fill="url(#tg4_${moduleId}_${idx})"/>
+      <g stroke="${c1}" stroke-width="1" fill="none" opacity="0.7">
+        <circle cx="80" cy="48" r="12"/><circle cx="80" cy="48" r="22"/><circle cx="80" cy="48" r="32"/>
+      </g>
+    </svg>`,
+    // variant 5 — bars
+    `<svg viewBox="0 0 160 96" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <rect width="160" height="96" fill="${c2}" fill-opacity="0.1"/>
+      <g fill="${c1}">
+        ${[24,40,14,56,32,62,22,48,36,28,52,18].map((h,i)=>`<rect x="${8+i*12}" y="${80-h}" width="7" height="${h}" opacity="${0.4+i*0.04}"/>`).join('')}
+      </g>
+    </svg>`,
+  ];
+  return variants[idx % variants.length];
+}
+
+/* ============================================================
+   RENDER
+============================================================ */
+
+function renderGrades() {
+  const grid = document.getElementById('gradeGrid');
+  grid.innerHTML = GRADES.map(g => `
+    <article class="poster unlocked" onclick="selectGrade('${g.id}')">
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+      <div class="poster-art">${g.art}</div>
+      <div class="poster-overlay"></div>
+      <div class="poster-topbar">
+        <span class="chip">${g.eyebrow}</span>
+        <span class="chip green">● AVAILABLE</span>
+      </div>
+      <div class="poster-info">
+        <div class="poster-eyebrow">Curriculum Track</div>
+        <div class="poster-title">${g.title}</div>
+        <div class="poster-desc">${g.desc}</div>
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderModules() {
+  const car = document.getElementById('moduleCarousel');
+  car.innerHTML = MODULES.map(m => `
+    <article class="poster ${m.unlocked ? 'unlocked' : 'locked'}" onclick="selectModule('${m.id}')">
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+      <div class="poster-art">${makeModuleArt(m.id, m.accent, m.accent2)}</div>
+      <div class="poster-overlay"></div>
+
+      <div class="poster-topbar">
+        <span class="chip">${m.eyebrow}</span>
+        ${m.unlocked
+          ? `<span class="chip green">● UNLOCKED</span>`
+          : `<span class="chip amber">◆ LOCKED</span>`}
+      </div>
+
+      ${!m.unlocked ? `
+        <div class="lock-badge">
+          <div class="lock-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="5" y="11" width="14" height="10" rx="2"/>
+              <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+            </svg>
+          </div>
+          <div class="lock-text">Tap to Unlock</div>
+        </div>
+      ` : ''}
+
+      <div class="poster-info">
+        <div class="poster-eyebrow">${m.unlocked ? 'Ready to Launch' : 'Premium Content'}</div>
+        <div class="poster-title">${m.title}</div>
+        <div class="poster-desc">${m.desc}</div>
+        ${m.unlocked ? `
+          <div class="poster-progress"><span style="width:${Math.round(m.progress*100)}%"></span></div>
+          <div class="poster-progress-label">
+            <span>Progress</span>
+            <span>${Math.round(m.progress*100)}%</span>
+          </div>
+        ` : `
+          <div class="poster-progress-label" style="margin-top:14px;">
+            <span>${m.stations.length} Stations</span>
+            <span>$29</span>
+          </div>
+        `}
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderStations(moduleId) {
+  const mod = MODULES.find(m => m.id === moduleId);
+  if (!mod) return;
+
+  document.getElementById('stationLabel').textContent = `03 · ${mod.eyebrow} Stations`;
+  document.getElementById('stationTitle').innerHTML = mod.title.replace(/(\b\w+\b)$/, '<span class="accent">$1</span>');
+  document.getElementById('stationSub').textContent = mod.desc;
+
+  const list = document.getElementById('stationList');
+  list.innerHTML = mod.stations.map((s, i) => {
+    const tagClass = s.tag === 'I Do' ? 'i-do' : s.tag === 'We Do' ? 'we-do' : 'you-do';
+    return `
+      <article class="station">
+        <div class="station-thumb">${makeStationThumb(mod.id, i, mod.accent, mod.accent2)}</div>
+        <div class="station-body">
+          <div class="station-num">Station ${s.n}</div>
+          <div class="station-title">${s.title}</div>
+          <div class="station-desc">${s.desc}</div>
+          <div class="station-tags">
+            <span class="tag ${tagClass}">${s.tag}</span>
+            <span class="tag">Solo / Co-op</span>
+            <span class="tag">Auto-save</span>
+          </div>
+        </div>
+        <div class="station-play">
+          <div class="station-time">Est. Time<strong>${s.time}</strong></div>
+          <button class="play-btn" aria-label="Launch station">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+/* ============================================================
+   NAV
+============================================================ */
+
+let selectedGrade = null;
+let selectedModule = null;
+
+function goTo(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${view}`).classList.add('active');
+  updateBreadcrumb(view);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateBreadcrumb(view) {
+  const bc = document.getElementById('breadcrumb');
+  let html = `<span class="crumb ${view==='grade'?'active':''}" onclick="goTo('grade')">Select Grade</span>`;
+  if (selectedGrade) {
+    const g = GRADES.find(x => x.id === selectedGrade);
+    html += `<span class="sep">▸</span><span class="crumb ${view==='module'?'active':''}" onclick="goTo('module')">${g.title}</span>`;
+  }
+  if (selectedModule) {
+    const m = MODULES.find(x => x.id === selectedModule);
+    html += `<span class="sep">▸</span><span class="crumb ${view==='station'?'active':''}">${m.title}</span>`;
+  }
+  bc.innerHTML = html;
+}
+
+function selectGrade(id) {
+  selectedGrade = id;
+  const g = GRADES.find(x => x.id === id);
+  document.getElementById('moduleSubtitle').textContent =
+    `${g.title} · ${g.eyebrow}. Eight immersive modules adapted for this grade band. One is unlocked with your starter bundle.`;
+  goTo('module');
+}
+
+function selectModule(id) {
+  const mod = MODULES.find(x => x.id === id);
+  if (!mod.unlocked) {
+    openBuy(mod);
+    return;
+  }
+  selectedModule = id;
+  renderStations(id);
+  goTo('station');
+}
+
+function scrollCarousel(id, dir) {
+  const el = document.getElementById(id);
+  const step = el.clientWidth * 0.7;
+  el.scrollBy({ left: dir * step, behavior: 'smooth' });
+}
+
+/* ============================================================
+   BUY MODAL
+============================================================ */
+
+function openBuy(mod) {
+  document.getElementById('modalModuleName').textContent = mod.title.toUpperCase();
+  document.getElementById('modalCopy').textContent =
+    `Unlock "${mod.title}" and get instant access to all ${mod.stations.length} stations, teacher dashboards, and class analytics. Your progress syncs across every headset on your license.`;
+  document.getElementById('buyModal').classList.add('open');
+}
+
+function closeBuy() {
+  document.getElementById('buyModal').classList.remove('open');
+}
+
+// Close modal on scrim click
+document.getElementById('buyModal').addEventListener('click', (e) => {
+  if (e.target.id === 'buyModal') closeBuy();
+});
+
+// Close modal on Esc
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeBuy();
+});
+
+/* ============================================================
+   INIT
+============================================================ */
+
+renderGrades();
+renderModules();
+</script>
+</body>
+</html>
